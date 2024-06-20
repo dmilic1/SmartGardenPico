@@ -8,7 +8,11 @@ soil_moisture_pin = ADC(Pin(26))
 def read_soil_moisture():
     moisture_value = soil_moisture_pin.read_u16()  # Read the raw analog value (0-65535)
     normalized = moisture_value/65535
+    normalized = 1 - normalized
     return normalized
+
+#kad je na zraku do 0,2
+#pumpa se aktivira na 0,4 ili 0,5
 
 # Main loop
 while True:
