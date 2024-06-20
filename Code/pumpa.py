@@ -1,6 +1,6 @@
 from machine import ADC, Pin
 import time
-from senzor import read_soil_moisture
+from Sensors.soil_sensor import read_soil_moisture
 
 # podesiti na pin koji koristimo u implementaciji
 relay_pin = Pin(15, Pin.OUT)

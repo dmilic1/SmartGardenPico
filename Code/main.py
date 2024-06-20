@@ -27,7 +27,7 @@ else:
     print('IP: ', ip)
  
 # syncing the time
-import ntptime
+import WeatherAPI.ntptime as ntptime
 while True:
     try:
         ntptime.settime()
@@ -38,7 +38,7 @@ while True:
         continue
  
 # init LCD
-from lcd1602 import LCD
+from WeatherAPI.lcd1602 import LCD
 lcd=LCD()
 lcd.clear() 
 string = 'Loading...'

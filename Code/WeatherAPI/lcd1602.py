@@ -1,6 +1,7 @@
 import machine
 import time
  
+#Print on LCD Display 
 class LCD():
     def __init__(self, addr=0x27, blen=1):
         sda = machine.Pin(0)
