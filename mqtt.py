@@ -1,15 +1,3 @@
-'''
-
-    Ugradbeni sistemi
-    
-    Primjer korištenja MQTT za postavljanje stanja LED i očitavanje pritiska na taster na sistemu picoETF.
-    Demonstrira korištenje mqtt.robust i ujson. Koriste se zbirne teme za sve LED odnosno za sve tastere. Pojedinačne
-    LED/tasteri se identificiraju korištenjem JSON-formatiranih poruka.
-    
-    Samim Konjicija, 13.4.2023. godine
-
-'''
-
 from machine import Pin
 import time
 import network
