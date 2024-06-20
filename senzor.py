@@ -12,10 +12,10 @@ def read_soil_moisture():
     return normalized
 
 #kad je na zraku do 0,2
-#pumpa se aktivira na 0,4 ili 0,5
+#pumpa se aktivira na 0,4 / 0,5 / 0.6
 
 # Main loop
 while True:
     moisture_value = read_soil_moisture()
     print("Soil Moisture Value:", moisture_value)
-    time.sleep(1)  # Delay for 1 second
+    time.sleep(3)  # Delay for 1 second
