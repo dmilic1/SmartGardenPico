@@ -1,85 +1,96 @@
-from machine import Pin
+from machine import Pin, ADC, PWM
 import time
 import network
 from umqtt.robust import MQTTClient
 import ujson
+from dht import DHT11
 
-t1=Pin(0)
-t2=Pin(1)
-t3=Pin(2)
-t4=Pin(3)
+# potrebni pinovi
+taster = Pin(0, Pin.IN)
+potenciometar = ADC(28)
+led0 = Pin(4, Pin.OUT)
+led1 = Pin(5, Pin.OUT)
+led2 = PWM(Pin(6))
+led2.freq(1000)
+red = PWM(Pin(14))
+green = PWM(Pin(12))
+blue = PWM(Pin(13))
+blue.freq(1000)
+green.freq(1000)
+red.freq(1000)
+senzor = DHT11(Pin(26))
 
-led0=Pin(4,Pin.OUT)
-led1=Pin(5,Pin.OUT)
-led2=Pin(6,Pin.OUT)
-led3=Pin(7,Pin.OUT)
-led4=Pin(8,Pin.OUT)
-led5=Pin(9,Pin.OUT)
-led6=Pin(10,Pin.OUT)
-led7=Pin(11,Pin.OUT)
-
-ledice=[led0,led1,led2,led3,led4,led5,led6,led7]
-
-
-# Uspostavljanje WiFI konekcije
+# WiFi connection
 nic = network.WLAN(network.STA_IF)
 nic.active(True)
-nic.connect('ETF-WiFi-Guest', 'ETF-WiFi-Guest')
-
+nic.connect('ETF-Logosoft', '')
 while not nic.isconnected():
-    print("Čekam konekciju ...")
+    print("Waiting for connection...")
     time.sleep(5)
+print("WiFi connected")
+print("Network config:", nic.ifconfig())
 
-print("WLAN konekcija uspostavljena")
-ipaddr=nic.ifconfig()[0]
+# MQTT
+def sub(topic, msg):
+    print('Message arrived:', topic)
+    print('Payload:', msg)
+    if topic == b'imola/led1':
+        led0.value(int(msg) == 1)
+    elif topic == b'imola/led2':
+        led1.value(int(msg) == 1)
+    elif topic == b'imola/led3':
+        duty_cycle = int(float(msg) * 65535.0)
+        led2.duty_u16(duty_cycle)
+    elif topic == b'imola/red':
+        duty_cycle = int(float(msg) * 65535.0)
+        red.duty_u16(duty_cycle)
+    elif topic == b'imola/green':
+        duty_cycle = int(float(msg) * 65535.0)
+        green.duty_u16(duty_cycle)
+    elif topic == b'imola/blue':
+        duty_cycle = int(float(msg) * 65535.0)
+        blue.duty_u16(duty_cycle)
 
-print("Mrežne postavke:")
-print(nic.ifconfig())
-
-# Funkcija koja se izvršava na prijem MQTT poruke
-def sub(topic,msg):
-    parsed=ujson.loads(msg)
-    led=parsed["led"]
-    stanje=parsed["stanje"]
-    print('Tema: '+str(topic))
-    print('Poruka: '+str(msg))
-    print('LED: '+str(led))
-    print('Stanje: '+str(stanje))
-    
-    if stanje==1:
-        ledice[led].on()
-    else:
-        ledice[led].off()
-    
-# Funkcije za slanje MQTT poruka na pritisak tastera
-def t1_publish(p):
-    msg=b'{ "taster": 1,"stanje": 1 }'
-    mqtt_conn.publish(b'picoetf/tasteri',msg)
-def t2_publish(p):
-    msg=b'{ "taster": 2,"stanje": 1 }'
-    mqtt_conn.publish(b'picoetf/tasteri',msg)
-def t3_publish(p):
-    msg=b'{ "taster": 3,"stanje": 1 }'
-    mqtt_conn.publish(b'picoetf/tasteri',msg)
-def t4_publish(p):
-    msg=b'{ "taster": 4,"stanje": 1 }'
-    mqtt_conn.publish(b'picoetf/tasteri',msg)
-
-
-# Uspostavljanje konekcije sa MQTT brokerom
-mqtt_conn = MQTTClient(client_id='picoETF', server='broker.hivemq.com',user='',password='',port=1883)
+# MQTT connection
+mqtt_conn = MQTTClient(client_id='imola', server='broker.hivemq.com', port=1883)
 mqtt_conn.set_callback(sub)
 mqtt_conn.connect()
-mqtt_conn.subscribe(b"picoetf/ledice")
+print("Connected to MQTT broker")
 
-print("Konekcija sa MQTT brokerom uspostavljena")
+# Pretplata
+mqtt_conn.subscribe(b'imola/led1')
+mqtt_conn.subscribe(b'imola/led2')
+mqtt_conn.subscribe(b'imola/led3')
+mqtt_conn.subscribe(b'imola/red')
+mqtt_conn.subscribe(b'imola/blue')
+mqtt_conn.subscribe(b'imola/green')
 
-t1.irq(trigger=Pin.IRQ_RISING,handler=t1_publish)
-t2.irq(trigger=Pin.IRQ_RISING,handler=t2_publish)
-t3.irq(trigger=Pin.IRQ_RISING,handler=t3_publish)
-t4.irq(trigger=Pin.IRQ_RISING,handler=t4_publish)
+# Stanje tastera
+def taster_publish(p):
+    mqtt_conn.publish(b'imola/taster', str(taster.value()))
 
-# U glavnoj petlji se čeka prijem MQTT poruke
+taster.irq(trigger=Pin.IRQ_RISING, handler=taster_publish)
+
+def publish_temperature_humidity():
+    senzor.measure()
+    temperature = senzor.temperature()
+    humidity = senzor.humidity()
+    msg = b'{ \n "Temperature" : ' + str(temperature).encode() + b', \n "Humidity" : ' + str(humidity).encode() + b' \n }'
+    mqtt_conn.publish(b'imola/senzor', msg)
+
+# Main
+pot = 0
 while True:
-    mqtt_conn.wait_msg()
+    mqtt_conn.check_msg()
+    # Promjena vrijednosti potenciometra
+    current_pot = potenciometar.read_u16()
+    if current_pot != pot:
+        pot = current_pot
+        pot_value = pot / 65535.0
+        mqtt_conn.publish(b'imola/potenciometar', str(pot_value))
+    
+    # dht
+    publish_temperature_humidity()
+    
+    time.sleep(1)
 
