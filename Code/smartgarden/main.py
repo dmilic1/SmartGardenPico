@@ -1,16 +1,20 @@
+import smartgarden.ntptime
+from smartgarden.tftdisplay import setup_display, display_time
 import utime
-import machine
-from smartgarden.tftdisplay import display_soil_moisture, display_current_time
-from smartgarden.soil_sensor import read_soil_moisture
+from ili934xnew import ILI9341, color565
+from machine import Pin, SPI
+from micropython import const
+import glcdfont
+import tt24
+import time
 
-# Set up display and other configurations (setup_display() function if needed)
 
-# Example of displaying time and soil moisture
-font = tt24
+pump = Pin(27, Pin.OUT)
+pump.value(1)
+setup_display()
+
+# Main loop to display time on TFT display
 while True:
-    moisture_value = read_soil_moisture()
-    print("Moisture value:", moisture_value)  # Dijagnostički ispis, možete ga izbrisati nakon provjere
-    display_soil_moisture(moisture_value)
-    display_current_time()
-    utime.sleep(3)  # Prilagodite pauzu prema potrebi vaše aplikacije
+    display_time()
+    utime.sleep(1)
 

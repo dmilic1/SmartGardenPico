@@ -1,10 +1,9 @@
-# tftdisplay.py
-
 from ili934xnew import ILI9341, color565
 from machine import Pin, SPI
 from micropython import const
+from smartgarden.soil_sensor import read_soil_moisture
 import tt24
-import time
+import utime
 
 # Display dimensions
 SCR_WIDTH = const(320)
@@ -48,28 +47,33 @@ display.erase()
 
 # Function to display soil moisture
 def display_soil_moisture(moisture_value):
-    display.erase()
-    time_str = "{:.2f}".format(moisture_value)
-    x = CENTER_X - (len(time_str) * 14 // 2)
+    moisture_str = "Soil Moisture: {:.2f}".format(moisture_value)
+    x = CENTER_X - (len(moisture_str) * 14 // 2)
     y = CENTER_Y + 30
     display.set_pos(x, y)
     display.set_font(tt24)
-    display.print(f"Soil Moisture: {time_str}")
+    display.print(moisture_str)
 
 # Function to display current time
 def display_current_time():
-    now = time.localtime()
+    now = utime.localtime()
     time_str = "{:02}:{:02}:{:02}".format(now[3], now[4], now[5])
     x = CENTER_X - (len(time_str) * 14 // 2)
-    y = CENTER_Y - (24 // 2)
+    y = CENTER_Y - 30
     display.set_pos(x, y)
     display.set_font(tt24)
     display.print(time_str)
 
-# Example of combining both displays (you can integrate this into your application flow)
-def display_all():
-    display.erase()
-    display_current_time()
-    display_soil_moisture(0.0)  # Ovdje ćemo prikazati primjer vlažnosti tla, može se prilagoditi stvarnom čitanju
+# Main loop to continuously update the display
+if __name__ == "__main__":
+    while True:
+        # Clear specific areas of the display instead of the entire screen
+        display.set_pos(0, 0)
+        display.set_font(tt24)
+        display.print(" " * 20)  # Clear previous time
+        display.print(" " * 20)  # Clear previous moisture
 
+        display_current_time()
+        display_soil_moisture(read_soil_moisture())
+        utime.sleep(1)
 
