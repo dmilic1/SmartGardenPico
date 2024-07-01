@@ -2,6 +2,7 @@ from ili934xnew import ILI9341, color565
 from machine import Pin, SPI
 from micropython import const
 from smartgarden.soil_sensor import read_soil_moisture
+from smartgarden.pumpa import get_last_pump_on
 import tt24
 import time
 import socket
@@ -50,61 +51,36 @@ display.erase()
 
 # Function to display soil moisture
 def display_soil_moisture(moisture_value):
-    moisture_str = "{:.2f}".format(moisture_value)
+    moisture_str = "{:.10f}".format(moisture_value)
     x = CENTER_X - (len(moisture_str) * 14 // 2)
     y = CENTER_Y + 30
     display.set_pos(x, y)
     display.set_font(tt24)
     display.print("Soil Moisture: {}".format(moisture_str))
 
-# Function to display current time
-def display_current_time():
-    now = utime.localtime()
-    time_str = "{:02}:{:02}:{:02}".format(now[3], now[4], now[5])
-    x = CENTER_X - (len(time_str) * 14 // 2)
-    y = CENTER_Y - (24 // 2)
-    display.set_pos(x, y)
-    display.set_font(tt24)
-    display.print("Time: {}".format(time_str))
+def display_last_pump_time():
+    last_pump_time = get_last_pump_on()
+    if last_pump_time is not None:
+        time_str = "{:02}:{:02}:{:02}".format(last_pump_time[3], last_pump_time[4], last_pump_time[5])
+        x = CENTER_X - (len(time_str) * 14 // 2)
+        y = CENTER_Y - (24 // 2)
+        display.set_pos(x, y)
+        display.set_font(tt24)
+        display.print("Last Pump On: {}".format(time_str))
+    else:
+        x = CENTER_X - (len("Last Pump On: Never") * 14 // 2)
+        y = CENTER_Y + 60
+        display.set_pos(x, y)
+        display.set_font(tt24)
+        display.print("Last Pump On: Never")
 
-# Example of combining both displays (you can integrate this into your application flow)
 def display_all():
     display.erase()
-    display_current_time()
     display_soil_moisture(read_soil_moisture())  # Here you can show actual soil moisture reading
+    display_last_pump_time()
 
-# Function to fetch NTP time
-def get_ntp_time():
-    NTP_DELTA = 3155673600
-    host = "pool.ntp.org"
-    try:
-        NTP_QUERY = bytearray(48)
-        NTP_QUERY[0] = 0x1b
-        addr = socket.getaddrinfo(host, 123)[0][-1]
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(1)
-        res = s.sendto(NTP_QUERY, addr)
-        msg = s.recv(48)
-        s.close()
-        val = struct.unpack("!I", msg[40:44])[0]
-        print("NTP time fetched successfully:", val - NTP_DELTA)
-        return val - NTP_DELTA
-    except Exception as e:
-        print("Failed to get NTP time:", e)
-        return None
 
-# Function to set MicroPython RTC time from NTP
-def settime():
-    t = get_ntp_time() + 7200  # Add 2 hours (7200 seconds) for timezone adjustment
-    tm = utime.localtime(t)
-    tm = tm[0:3] + (0,) + tm[3:6] + (0,)
-    import machine
-    machine.RTC().datetime(tm)
-    print("Current time set to:", utime.localtime())
-
-# Main loop for continuous display updates
 if __name__ == "__main__":
-    settime()  # Set the MicroPython RTC time initially
 
     while True:
         display_all()  # Update display with current time and soil moisture

@@ -1,96 +1,73 @@
-from machine import Pin, ADC, PWM
-import time
-import network
-from umqtt.robust import MQTTClient
-import ujson
-from dht import DHT11
+from machine import Pin
+import utime
+from umqtt.simple import MQTTClient
+from smartgarden.pumpa import togglepump_main
 
-# potrebni pinovi
-taster = Pin(0, Pin.IN)
-potenciometar = ADC(28)
-led0 = Pin(4, Pin.OUT)
-led1 = Pin(5, Pin.OUT)
-led2 = PWM(Pin(6))
-led2.freq(1000)
-red = PWM(Pin(14))
-green = PWM(Pin(12))
-blue = PWM(Pin(13))
-blue.freq(1000)
-green.freq(1000)
-red.freq(1000)
-senzor = DHT11(Pin(26))
 
-# WiFi connection
-nic = network.WLAN(network.STA_IF)
-nic.active(True)
-nic.connect('ETF-Logosoft', '')
-while not nic.isconnected():
-    print("Waiting for connection...")
-    time.sleep(5)
-print("WiFi connected")
-print("Network config:", nic.ifconfig())
+# Define MQTT broker settings
+broker = 'w866624e.ala.dedicated.aws.emqxcloud.com'
+port = 1883
+client_id = 'imola'
+username = 'admin'
+password = 'admin'
 
-# MQTT
-def sub(topic, msg):
-    print('Message arrived:', topic)
-    print('Payload:', msg)
-    if topic == b'imola/led1':
-        led0.value(int(msg) == 1)
-    elif topic == b'imola/led2':
-        led1.value(int(msg) == 1)
-    elif topic == b'imola/led3':
-        duty_cycle = int(float(msg) * 65535.0)
-        led2.duty_u16(duty_cycle)
-    elif topic == b'imola/red':
-        duty_cycle = int(float(msg) * 65535.0)
-        red.duty_u16(duty_cycle)
-    elif topic == b'imola/green':
-        duty_cycle = int(float(msg) * 65535.0)
-        green.duty_u16(duty_cycle)
-    elif topic == b'imola/blue':
-        duty_cycle = int(float(msg) * 65535.0)
-        blue.duty_u16(duty_cycle)
+# Define MQTT topics
+toggle_pump_topic = b'imola/toggle_pump'
 
-# MQTT connection
-mqtt_conn = MQTTClient(client_id='imola', server='broker.hivemq.com', port=1883)
-mqtt_conn.set_callback(sub)
-mqtt_conn.connect()
+# Initialize pump and button pins
+pump = Pin(27, Pin.OUT)
+taster = Pin(0, Pin.IN, Pin.PULL_UP)
+
+pump_on = True
+last_pump_timestamp = None
+last_toggle_time = utime.ticks_ms()
+
+# Function to toggle pump and handle local debounce
+def toggle_pump():
+    global pump_on, last_toggle_time
+    current_time = utime.ticks_ms()
+    if utime.ticks_diff(current_time, last_toggle_time) < 500:  # Debounce period of 500 ms
+        return
+    
+    pump_on = not pump_on
+    pump.value(pump_on)
+    if pump_on:
+        print("Pump is OFF")
+    else:
+        print("Pump is ON")
+    
+    last_toggle_time = current_time
+
+# MQTT client initialization
+mqtt_client = MQTTClient(client_id, broker, port, user=username, password=password)
+
+# Function to handle incoming MQTT messages
+def sub_callback(topic, msg):
+    print("Message received on topic:", topic)
+    print("Payload:", msg)
+    
+    if topic == toggle_pump_topic:
+        toggle_pump()
+
+# Set callback function for MQTT messages
+mqtt_client.set_callback(sub_callback)
+
+# Connect to MQTT broker
+mqtt_client.connect()
 print("Connected to MQTT broker")
 
-# Pretplata
-mqtt_conn.subscribe(b'imola/led1')
-mqtt_conn.subscribe(b'imola/led2')
-mqtt_conn.subscribe(b'imola/led3')
-mqtt_conn.subscribe(b'imola/red')
-mqtt_conn.subscribe(b'imola/blue')
-mqtt_conn.subscribe(b'imola/green')
+# Subscribe to MQTT topic for pump control
+mqtt_client.subscribe(toggle_pump_topic)
 
-# Stanje tastera
-def taster_publish(p):
-    mqtt_conn.publish(b'imola/taster', str(taster.value()))
-
-taster.irq(trigger=Pin.IRQ_RISING, handler=taster_publish)
-
-def publish_temperature_humidity():
-    senzor.measure()
-    temperature = senzor.temperature()
-    humidity = senzor.humidity()
-    msg = b'{ \n "Temperature" : ' + str(temperature).encode() + b', \n "Humidity" : ' + str(humidity).encode() + b' \n }'
-    mqtt_conn.publish(b'imola/senzor', msg)
-
-# Main
-pot = 0
+# Main loop to handle MQTT messages and button press
 while True:
-    mqtt_conn.check_msg()
-    # Promjena vrijednosti potenciometra
-    current_pot = potenciometar.read_u16()
-    if current_pot != pot:
-        pot = current_pot
-        pot_value = pot / 65535.0
-        mqtt_conn.publish(b'imola/potenciometar', str(pot_value))
+    mqtt_client.check_msg()  # Check for MQTT messages
     
-    # dht
-    publish_temperature_humidity()
-    
-    time.sleep(1)
+    # Check for button press (simulate button press event)
+    if not taster.value():
+        togglepump_main()
+
+        utime.sleep_ms(500)  # Debounce delay
+
+    utime.sleep_ms(100)  # Adjust sleep time as needed
 

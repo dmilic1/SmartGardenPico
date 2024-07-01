@@ -1,32 +1,33 @@
-from machine import ADC, Pin
+from machine import Pin
 import time
-from Sensors.soil_sensor import read_soil_moisture
+from smartgarden.soil_sensor import read_soil_moisture
 
-# podesiti na pin koji koristimo u implementaciji
-relay_pin = Pin(15, Pin.OUT)
+# Pins setup
+pump_pin = Pin(27, Pin.OUT)
 
-
-# Funkcija kontrolise rad pumpe
+# Function to control the pump
 def control_pump(state):
-    if state:
-        relay_pin.value(1)  # Turn on the pump
+    pump_pin.value(state)
+    if state == 0:
         print("Pumpa je aktivna")
     else:
-        relay_pin.value(0)  # Turn off the pump
         print("Pumpa nije aktivna")
 
+def toggleautomaticpump_main():
+    while True:
+        moisture_value = read_soil_moisture()
+        print("Soil Moisture Value:", moisture_value)
 
-# Main loop
-while True:
-    moisture_value = read_soil_moisture()
-    print("Soil Moisture Value:", moisture_value)
+        # Check soil moisture level and control pump automatically
+        if moisture_value < 0.4:
+            print("Vlaznost tla je niska, ukljucivanje pumpe...")
+            control_pump(0)  # Turn on the pump
+            time.sleep(5)  # Keep the pump on for 5 seconds (adjust as needed)
+            print("Iskljucivanje pumpe nakon 5 sekundi...")
+            control_pump(1)  # Turn off the pump
+        else:
+            print("Vlaznost tla je dovoljno visoka, pumpa nije potrebna.")
+            control_pump(1)  # Ensure the pump is off when not needed
 
-    # Da li je vlaznost zemljista manja od thresholda?
-    if moisture_value < 0.4:
-        control_pump(True)  # upali pumpu
-        time.sleep(5)  # pumpa je aktivna 5 sekundi / potrebno podesiti
-        control_pump(False)  # ugasimo pumpu
-    else:
-        control_pump(False)  # osiguravamo da pumpa nije aktivna kada nije potrebno
+        time.sleep(600)  # Wait 10 minutes before the next measurement
 
-    time.sleep(600)  # Sacekaj 10 min do sljedeceg mjerenja
