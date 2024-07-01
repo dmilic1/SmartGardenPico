@@ -15,6 +15,9 @@ def record_last_pump_on():
 def get_last_pump_on():
     return last_pump_timestamp
 
+def get_pump_on():
+    return pump_on
+
 def toggle_pump(pin):
     global pump_on
     pump_on = not pump_on
@@ -37,5 +40,5 @@ def togglepump_main():
         prev_taster_value = current_taster_value
 
         # Debouncing delay
-        time.sleep(0.1)
+        time.sleep_ms(5)
 
