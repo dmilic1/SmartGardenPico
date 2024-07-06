@@ -11,14 +11,14 @@ from dht import DHT11
 senzor = DHT11(Pin(28))
 
 def run_smart_garden_system():
-    # Inicijalizacija
+    # Initialization
     pump = Pin(27, Pin.OUT)
     taster = Pin(0, Pin.IN, Pin.PULL_UP)
     pump_on = True
 
-    # Spajanje na WiFi
-    ssid = 'Lab220'
-    password = 'lab220lozinka'
+    # Connecting to WiFi
+    ssid = 'ETF-Logosoft'
+    password = ''
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(ssid, password)
@@ -30,8 +30,8 @@ def run_smart_garden_system():
     print("WiFi connected")
     print("Network config:", wlan.ifconfig())
     
+    # OpenWeather API
     openweather_api_key = "bae091179466b890b842f5a4dd85ac83"
-        # Open Weather
     TEMPERATURE_UNITS = {
         "standard": "K",
         "metric": "°C",
@@ -130,12 +130,9 @@ def run_smart_garden_system():
     # Glavna petlja za obradu MQTT poruka i događaja pritiska tipke
     while True:
         try:
-            mqtt_client.check_msg()  # Provjeri MQTT poruke
-            
-            # Čitanje vlage tla i slanje na MQTT
+            mqtt_client.check_msg() 
             moisture_value = read_soil_moisture()
             moisture_percent = format_moisture_percent(moisture_value)
-            
             weather_data = get_weather('sarajevo', openweather_api_key, units=units)
             senzor.measure()
             room_humidity = senzor.humidity()
@@ -144,20 +141,17 @@ def run_smart_garden_system():
             humidity = weather_data["main"]["humidity"]
             last_pump_time = get_last_pump_on()
             
-            # Slanje formatirane vrijednosti na MQTT
             mqtt_client.publish(b'imola/soil_moisture', moisture_percent.encode())
             mqtt_client.publish(b'imola/room_humidity', "{}%".format(room_humidity).encode())
             mqtt_client.publish(b'imola/weather', str(weather).encode())
             mqtt_client.publish(b'imola/lastpump', "{:02}:{:02}:{:02}".format(last_pump_time[3], last_pump_time[4], last_pump_time[5]).encode())
             mqtt_client.publish(b'imola/temperature', "{:.2f} °C".format(temp).encode())
             mqtt_client.publish(b'imola/humidity', "{:}%".format(humidity).encode())
-
             
-            time.sleep(5)  # Pauza između čitanja i slanja
+            time.sleep(5)  
             
         except Exception as e:
             print("Exception occurred:", e)
-            time.sleep(5)  # Pauza prije ponovnog pokušaja
-
+            time.sleep(5)  
 
 

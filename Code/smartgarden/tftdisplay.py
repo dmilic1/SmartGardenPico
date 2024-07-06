@@ -12,7 +12,6 @@ import utime
 import urequests
 from dht import DHT11
 
-
 senzor = DHT11(Pin(28))
 
 openweather_api_key = "bae091179466b890b842f5a4dd85ac83"
@@ -79,7 +78,7 @@ display.erase()
 
 def display_soil_moisture(moisture_value):
     moisture_str = "{:.2f}%".format(moisture_value*100)
-    x = CENTER_X - (len(moisture_str) * 47 // 2)
+    x = CENTER_X - (len(moisture_str) * 49 // 2)
     y = CENTER_Y - 60
     display.set_pos(x, y)
     display.set_font(tt24)
@@ -102,7 +101,7 @@ def display_last_pump_time():
         display.print("Last Pump Activation: Never")
 
 def display_pump_status():
-    pump_status = "OFF" if get_pump_on() else "OFF"
+    pump_status = "OFF" if get_pump_on() else "ON"
     x = CENTER_X - (len("Pump Status: " + pump_status) * 28 // 3)
     y = CENTER_Y + 35
     display.set_pos(x, y)
@@ -112,17 +111,11 @@ def display_pump_status():
 def display_automatic_pump_status():
     moisture_value = read_soil_moisture()
     if moisture_value < 0.4:
-        x = CENTER_X - (len("Vlaznost tla je niska, ukljucivanje pumpe. Iskljucivanje pumpe nakon 5 sekundi...") * 15 // 2)
+        x = CENTER_X - (len("Low soil moisture: pump on, off in 5s.") * 15 // 2)
         y = CENTER_Y + 90
         display.set_pos(x, y)
         display.set_font(tt24)
-        display.print("Vlaznost tla je niska, ukljucivanje pumpe. Iskljucivanje pumpe nakon 5 sekundi...")
-    else:  
-        x = CENTER_X - (len("Vlaznost tla je dovoljno visoka, pumpa nije potrebna.") * 15 // 2)
-        y = CENTER_Y + 90
-        display.set_pos(x, y)
-        display.set_font(tt24)
-        display.print("Vlaznost tla je dovoljno visoka, pumpa nije potrebna.")
+        display.print("Low soil moisture: pump on, off in 5s.")
 
 def display_weather(weather_data):
     weather = weather_data["weather"][0]["main"]
@@ -161,8 +154,8 @@ def display_room_humidity():
 
 def display_all():
     weather_data = get_weather('sarajevo', openweather_api_key, units=units)
-    
-    if get_activepump():
+    print("Display all call")
+    if get_activepump()==True:
         display.erase()
         display_automatic_pump_status()
     else:

@@ -1,43 +1,43 @@
-from machine import Pin
+from machine import Pin, Timer
 import time
 import utime
 from smartgarden.soil_sensor import read_soil_moisture
 
-# Pin setup
 pump_pin = Pin(27, Pin.OUT)
 taster = Pin(0, Pin.IN, Pin.PULL_UP)
-
-# Global variables
 pump_on = False
 last_pump_timestamp = utime.localtime()
+debounce_timer = Timer()
+debounce_delay = 2000 
+activepump=False
+last_interrupt_time = 0
+taster.irq(trigger=Pin.IRQ_RISING,handler=togglepump_main)
 
-# Function to control the pump
+#Mainly used to see automatic pump
 def control_pump(state):
     pump_pin.value(state)
     if state == 0:
-        print("Pumpa je aktivna")
+        print("Pump is active")
     else:
-        print("Pumpa nije aktivna")
+        print("Pumpa is not active")
 
-# Function to record the last pump activation time
+#Record the time when the pump was last on
 def record_last_pump_on():
     global last_pump_timestamp
     last_pump_timestamp = utime.localtime()
 
-# Function to get the last pump activation time
+#Return the last pump timestamp
 def get_last_pump_on():
     return last_pump_timestamp
 
-# Function to get the current pump state
+#Return the pump value (Check if the Manual irrigation is on)
 def get_pump_on():
     return pump_on
 
-activepump=False
-
+#Get automatic pump value (Check if the Automatic irrigation is on)
 def get_activepump():
     return activepump
 
-# Function to toggle the pump state
 def toggle_pump(pin):
     global pump_on
     pump_on = not pump_on
@@ -48,19 +48,24 @@ def toggle_pump(pin):
         print("Pump is ON")
         record_last_pump_on()
 
-# Main function to handle manual pump control
-def togglepump_main():
-    prev_taster_value = taster.value()
+#Manual activation mode
+def togglepump_main(p):
+    global last_interrupt_time
+    current_time = time.ticks_ms()
 
+    # Debouncing 
+    if time.ticks_diff(current_time, last_interrupt_time) < debounce_delay:
+        return
+
+    # Update the last interrupt time
+    last_interrupt_time = current_time
+    print("Manual pump")
     current_taster_value = taster.value()
-
-    if prev_taster_value == 1 and current_taster_value == 0:
-        toggle_pump(taster)
-
-    prev_taster_value = current_taster_value
-
-
-# Main function to handle automatic pump control
+    print("Taster value:", current_taster_value)
+    toggle_pump(taster.value())
+    time.sleep(1)
+    
+#Automatic activation mode
 def toggleautomaticpump_main():
     moisture_value = read_soil_moisture()
     print("Soil Moisture Value:", moisture_value)
@@ -76,8 +81,6 @@ def toggleautomaticpump_main():
         print("Vlaznost tla je dovoljno visoka, pumpa nije potrebna.")
         control_pump(1)  
 
-
-# Combined main function
 def pump_main():
     # Start both automatic and manual control in parallel
     import _thread
@@ -87,4 +90,3 @@ def pump_main():
 
     # Run the automatic pump control in the main thread
     toggleautomaticpump_main()
-
