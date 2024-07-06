@@ -3,7 +3,7 @@ import utime
 import network
 import time
 from umqtt.simple import MQTTClient
-from smartgarden.pumpa import togglepump_main, get_last_pump_on
+from smartgarden.pump import togglepump_main, get_last_pump_on
 from smartgarden.soil_sensor import read_soil_moisture
 import urequests
 from dht import DHT11

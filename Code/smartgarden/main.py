@@ -1,5 +1,5 @@
 from smartgarden.tftdisplay import display_all
-from smartgarden.pumpa import togglepump_main, get_last_pump_on, pump_main, get_pump_on,toggleautomaticpump_main
+from smartgarden.pump import togglepump_main, get_last_pump_on, pump_main, get_pump_on,toggleautomaticpump_main
 from smartgarden.mqtt import run_smart_garden_system
 import utime
 from ili934xnew import ILI9341, color565
@@ -15,7 +15,7 @@ import utime
 import network
 import time
 from umqtt.simple import MQTTClient
-from smartgarden.pumpa import togglepump_main, get_last_pump_on
+from smartgarden.pump import togglepump_main, get_last_pump_on
 from smartgarden.soil_sensor import read_soil_moisture
 import urequests
 from dht import DHT11

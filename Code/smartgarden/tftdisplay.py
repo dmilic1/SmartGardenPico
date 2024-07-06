@@ -2,7 +2,7 @@ from ili934xnew import ILI9341, color565
 from machine import Pin, SPI
 from micropython import const
 from smartgarden.soil_sensor import read_soil_moisture
-from smartgarden.pumpa import get_last_pump_on,get_pump_on,get_activepump
+from smartgarden.pump import get_last_pump_on,get_pump_on,get_activepump
 from smartgarden.mqtt import run_smart_garden_system
 import tt24
 import time
