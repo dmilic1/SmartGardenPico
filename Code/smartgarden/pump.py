@@ -2,6 +2,8 @@ from machine import Pin, Timer
 import time
 import utime
 from smartgarden.soil_sensor import read_soil_moisture
+from smartgarden.main import get_weather
+
 
 pump_pin = Pin(27, Pin.OUT)
 taster = Pin(0, Pin.IN, Pin.PULL_UP)
@@ -12,6 +14,9 @@ debounce_delay = 2000
 activepump=False
 last_interrupt_time = 0
 taster.irq(trigger=Pin.IRQ_RISING,handler=togglepump_main)
+openweather_api_key = "bae091179466b890b842f5a4dd85ac83"
+units = "metric"
+
 
 #Mainly used to see automatic pump
 def control_pump(state):
@@ -68,9 +73,12 @@ def togglepump_main(p):
 #Automatic activation mode
 def toggleautomaticpump_main():
     moisture_value = read_soil_moisture()
+    weather_data = get_weather('sarajevo', openweather_api_key, units=units)
+    weather = weather_data["weather"][0]["main"]
+
     print("Soil Moisture Value:", moisture_value)
 
-    if moisture_value < 0.4:
+    if moisture_value < 0.4 and str(weather)!='rainy' and str(weather)!='Rainy':
         print("Vlaznost tla je niska, ukljucivanje pumpe...")
         control_pump(0)
         activepump=True

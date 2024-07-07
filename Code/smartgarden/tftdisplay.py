@@ -112,7 +112,7 @@ def display_automatic_pump_status():
     moisture_value = read_soil_moisture()
     if moisture_value < 0.4:
         x = CENTER_X - (len("Low soil moisture: pump on, off in 5s.") * 15 // 2)
-        y = CENTER_Y + 90
+        y = CENTER_Y
         display.set_pos(x, y)
         display.set_font(tt24)
         display.print("Low soil moisture: pump on, off in 5s.")
